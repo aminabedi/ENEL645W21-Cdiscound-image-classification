@@ -6,6 +6,9 @@ __pycache__/
 #Train set
 train_shuffled_100cat.csv
 
+#exporte models
+*.h5
+
 # C extensions
 *.so
 
