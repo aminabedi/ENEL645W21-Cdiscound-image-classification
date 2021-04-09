@@ -38,7 +38,7 @@ import base64
 import io
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 # Register your gpu if you have one in the environment
@@ -202,7 +202,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(lr = 1e-4),
 # In[ ]:
 
 
-inceptionv3_model.fit(train_image_generator,batch_size=16, validation_data = (val_image_generator),                    epochs=500,verbose=1, callbacks = [early_stop, monitor, lr_schedule])
+inceptionv3_model.fit(train_image_generator,batch_size=16, validation_data = (val_image_generator),                   steps_per_epoch=500, epochs=500,verbose=1, callbacks = [early_stop, monitor, lr_schedule])
 
 
 # In[16]:

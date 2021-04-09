@@ -46,7 +46,6 @@ import base64
 import io
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 
 
 # Run the cell below if you have a gpu that you want to use
@@ -54,10 +53,10 @@ import matplotlib.pyplot as plt
 # In[3]:
 
 
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-if len(physical_devices):
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
-print("GPUS:", physical_devices)
+#physical_devices = tf.config.experimental.list_physical_devices('GPU')
+#if len(physical_devices):
+#    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+#print("GPUS:", physical_devices)
 
 
 # ## 1. Load your data
@@ -333,7 +332,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(lr = 1e-4),
 
 
 
-model.fit(X_train, Y_train,epochs = 20,           verbose = 1, callbacks= [early_stop, monitor, lr_schedule],validation_data=(X_val,Y_val))
+model.fit(X_train, Y_train,epochs = 500,           verbose = 1, callbacks= [early_stop, monitor, lr_schedule],validation_data=(X_val,Y_val))
 
 
 # Testing 
