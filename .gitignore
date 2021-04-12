@@ -9,6 +9,7 @@ train_shuffled_100cat.csv
 #exporte models
 *.h5
 
+data-*
 # C extensions
 *.so
 

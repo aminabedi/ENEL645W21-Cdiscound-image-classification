@@ -132,17 +132,17 @@ gen_params = {"rescale":1.0/255,"featurewise_center":False,"samplewise_center":F
 train_image_datagen = tf.keras.preprocessing.image.ImageDataGenerator(**gen_params) 
 
 train_image_generator = train_image_datagen.flow_from_directory(DATA_ROOT+"train/",
-                                                    class_mode="categorical",  classes=[str(i) for i in range(99)], target_size=(180, 180), batch_size = 32,seed=seed,shuffle = True)
+                                                    class_mode="categorical",  classes=[str(i) for i in range(99)], target_size=(180, 180), batch_size = 16,seed=seed,shuffle = True)
 
 val_image_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255) 
 
 val_image_generator = val_image_datagen.flow_from_directory(DATA_ROOT+"val/",
-                                                     class_mode="categorical",  classes=[str(i) for i in range(99)],batch_size = 32,seed=seed, target_size=(180, 180),color_mode='rgb',shuffle = True)
+                                                     class_mode="categorical",  classes=[str(i) for i in range(99)],batch_size = 16,seed=seed, target_size=(180, 180),color_mode='rgb',shuffle = True)
 
 test_image_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255) 
 
 test_image_generator = val_image_datagen.flow_from_directory(DATA_ROOT+"test/",
-                                                     class_mode="categorical", classes=[str(i) for i in range(99)],batch_size = 32,seed=seed, target_size=(180, 180),color_mode='rgb')
+                                                     class_mode="categorical", classes=[str(i) for i in range(99)],batch_size = 16,seed=seed, target_size=(180, 180),color_mode='rgb')
 
 
 # Below we take a look at the shapes of our train/val/test sets and the target values
@@ -188,7 +188,7 @@ if PLOT_ENABLED:
 # 
 # ### Our trained-from-scratch convolutional model which gave the best result, but far less than the pre-trained ones
 
-# In[6]:
+# In[5]:
 
 
 def get_cnn_model(ishape = (180,180,3), lr = 1e-3):
@@ -219,7 +219,7 @@ def get_cnn_model(ishape = (180,180,3), lr = 1e-3):
     return model
 
 
-# In[7]:
+# In[6]:
 
 
 def get_mobilenet_model(ishape = (180,180,3), lr = 1e-4, dr = 0.1):
@@ -242,7 +242,7 @@ def get_mobilenet_model(ishape = (180,180,3), lr = 1e-4, dr = 0.1):
     return mobilenet_model, base_model
 
 
-# In[8]:
+# In[7]:
 
 
 def get_vgg16_model(ishape = (180,180,3), lr = 1e-4, dr = 0.1):
@@ -262,7 +262,7 @@ def get_vgg16_model(ishape = (180,180,3), lr = 1e-4, dr = 0.1):
     return model, base_model
 
 
-# In[9]:
+# In[8]:
 
 
 def get_resnet_model(ishape = (180,180,3), lr = 1e-4):
@@ -284,7 +284,7 @@ def get_resnet_model(ishape = (180,180,3), lr = 1e-4):
     return model, base_model
 
 
-# In[10]:
+# In[9]:
 
 
 def get_inception_model(ishape = (180,180,3), lr = 1e-4):
@@ -303,38 +303,70 @@ def get_inception_model(ishape = (180,180,3), lr = 1e-4):
     return model, base_model
 
 
-# In[11]:
+# In[14]:
+
+
+def get_effiecientnet_model(ishape = (180,180,3), lr = 1e-4):
+    input_layer = tf.keras.layers.Input(shape=ishape, dtype="float")
+    base_model = tf.keras.applications.EfficientNetB5(
+        input_shape=ishape,
+        include_top=False,
+        weights="imagenet",
+        input_tensor=input_layer,
+    )
+    base_model.trainable = False
+    x1 = base_model.output
+    x2 = tf.keras.layers.Flatten()(x1)
+    out = tf.keras.layers.Dense(NUM_CATEGORIES,activation = 'softmax')(x2)
+    model = tf.keras.Model(inputs = input_layer, outputs =out)
+    return model, base_model
+
+
+# In[15]:
 
 
 mobilenet_model, mobilenet_base_model = get_mobilenet_model()
 vgg16_model, vgg16_base_model = get_vgg16_model()
 resnet_model, resnet_base_model = get_resnet_model()
 inception_model, inception_base_model = get_inception_model()
+effiecientnet_model, effiecientnet_base_model = get_effiecientnet_model()
 models = {
     "cnn": {
         "model": get_cnn_model(),
-        "base": None
+        "base": None,
+        "ignore": False
     },
     "mobilenet": {
         "model": mobilenet_model,
-        "base": mobilenet_base_model
+        "base": mobilenet_base_model,
+        "ignore": False
     },
     "vgg16": {
         "model": vgg16_model,
-        "base": vgg16_base_model
+        "base": vgg16_base_model,
+        "ignore": False
     },
     "resnet": {
         "model": resnet_model,
-        "base": resnet_base_model
+        "base": resnet_base_model,
+        "ignore": False
     },
     "inception": {
         "model": inception_model,
         "base": inception_base_model,
+        "ignore": False
+
+    },
+    "effiecientnet": {
+        "model": effiecientnet_model,
+        "base": effiecientnet_base_model,
+        "ignore": False
+
     }
 }
 
 
-# In[12]:
+# In[16]:
 
 
 early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience = 6)
@@ -347,8 +379,8 @@ def lr_scheduler(epoch, lr):
 
 lr_schedule = tf.keras.callbacks.LearningRateScheduler(lr_scheduler,verbose = 0)
 
-TRAIN_EPOCHS = 20
-TUNE_EPOCHS = 5
+TRAIN_EPOCHS = 100
+TUNE_EPOCHS = 10
 STEPS_PER_EPOCH = 500
 
 
@@ -356,7 +388,10 @@ STEPS_PER_EPOCH = 500
 
 
 for name in models:
-    model, base = models[name]["model"], models[name]["base"]
+    model, base, ignore = models[name]["model"], models[name]["base"], models[name]["ignore"]
+    if ignore:
+        continue
+    print("Compiling {} model".format(name))
     model.compile(optimizer=tf.keras.optimizers.Adam(lr = 1e-4),
               loss='categorical_crossentropy',
               metrics=['accuracy'])
@@ -365,10 +400,12 @@ for name in models:
         model.load_weights(filename)
     except OSError as e:
         print("Weights for model <<{}>> has not been found, trainig from scratch.".format(name))
+    print("Training {} model".format(name))
     monitor = tf.keras.callbacks.ModelCheckpoint(filename, monitor='val_loss',                                             verbose=0, save_best_only=True,                                             save_weights_only=True,                                             mode='min')
+    
     model.fit(train_image_generator, steps_per_epoch=STEPS_PER_EPOCH, validation_data = (val_image_generator),                    validation_steps = 100,                    epochs=TRAIN_EPOCHS, verbose=1, callbacks = [early_stop, monitor, lr_schedule])
     model.load_weights(filename)
-    
+    models[name]["before_tuning"] = model.evaluate(test_image_generator)
     if base:
         base.trainable = True
         model.compile(optimizer=tf.keras.optimizers.Adam(lr = 1e-9),
@@ -377,8 +414,7 @@ for name in models:
         model.fit(train_image_generator, steps_per_epoch=STEPS_PER_EPOCH, validation_data = (val_image_generator),                    validation_steps = 100,                    epochs=TUNE_EPOCHS, verbose=1, callbacks = [early_stop, monitor, lr_schedule])
         model.load_weights(filename)
 
-    metrics = model.evaluate(test_image_generator)
-    models[name]["metrics"] = metrics
+    models[name]["metrics"] = model.evaluate(test_image_generator)
     print("Model {} got metrics:".format(name), metrics)
 
 
@@ -386,5 +422,5 @@ for name in models:
 
 
 for name in models:
-    print("Model {} results on the test set:", models[name]["metrics"])
+    print("Model {} results on the test set:".format(name), models[name]["metrics"])
 
